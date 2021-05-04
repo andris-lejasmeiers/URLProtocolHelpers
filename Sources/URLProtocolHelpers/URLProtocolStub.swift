@@ -44,21 +44,21 @@ open class URLProtocolStub: URLProtocol {
   open override func stopLoading() {}
 }
 
-extension URLProtocolStub {
-  public class func result(in request: NSMutableURLRequest) -> Result? {
+public extension URLProtocolStub {
+  class func result(in request: NSMutableURLRequest) -> Result? {
     result(in: request as URLRequest)
   }
 
-  public class func result(in request: URLRequest) -> Result? {
+  class func result(in request: URLRequest) -> Result? {
     property(forKey: resultPropertyKey, in: request) as? Result
   }
 
   /// - Note: Providing an URLRequest casted to NSMutableURLRequest won't work!
-  public class func setResult(_ value: Result, in request: NSMutableURLRequest) {
+  class func setResult(_ value: Result, in request: NSMutableURLRequest) {
     setProperty(value, forKey: resultPropertyKey, in: request)
   }
 
-  public class func removeResult(in request: NSMutableURLRequest) {
+  class func removeResult(in request: NSMutableURLRequest) {
     removeProperty(forKey: resultPropertyKey, in: request)
   }
 }

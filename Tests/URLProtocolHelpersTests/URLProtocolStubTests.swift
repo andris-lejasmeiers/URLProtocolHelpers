@@ -35,8 +35,8 @@ extension URLProtocolHelpersTests {
   }
 
   static func makeSomeRequest(from mutable: NSMutableURLRequest = makeSomeMutableRequest())
-    -> URLRequest {
-      mutable as URLRequest
+  -> URLRequest {
+    mutable as URLRequest
   }
 
   static func makeSomeMutableRequest(url: URL = makeSomeURL()) -> NSMutableURLRequest {
@@ -312,7 +312,7 @@ extension URLProtocolHelpersTests {
     let taskCompleted = expectation(description: #function)
     taskCompleted.isInverted = true
     session
-      .dataTask(with: request as URLRequest) { data, response, error in
+      .dataTask(with: request as URLRequest) { _, _, _ in
         taskCompleted.fulfill()
       }
       .resume()
