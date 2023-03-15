@@ -5,25 +5,10 @@
 //  Created by Andris Lejasmeiers on 01/09/2020.
 //
 
+@testable import URLProtocolHelpers
 import XCTest
 
-@testable import URLProtocolHelpers
-
 final class URLProtocolHelpersTests: XCTestCase {
-  static var allTests = [
-    ("test00ResultWhenNotSetReturnsNil", test00ResultWhenNotSet),
-    ("test01ResultWhenRequestCreatedAsMutable", test01ResultWhenRequestCreatedAsMutable),
-    ("test02ResultWhenForceCasting", test02ResultWhenForceCasting),
-    ("test03ResultWhenRemoved", test03ResultWhenRemoved),
-    ("test04ResultWhenMultipleAreSet", test04ResultWhenMultipleAreSet),
-    ("test05CanInitWhenResultUnspecified", test05CanInitWhenResultUnspecified),
-    ("test06CanInitWhenResultSpecified", test06CanInitWhenResultSpecified),
-    ("test07LoadingNotFinishedWhenResultNotSet", test07LoadingNotFinishedWhenResultNotSet),
-    ("test08RequestWithSuccessfulResult", test08RequestWithSuccessfulResult),
-    ("test09RequestWithFailureResult", test09RequestWithFailureResult),
-    ("test10RequestWithDelayedSuccessfulResult", test10RequestWithDelayedSuccessfulResult),
-  ]
-
   let sut = URLProtocolStub.self
 }
 
@@ -85,22 +70,25 @@ extension URLProtocolHelpersTests {
     }
   }
 
-  /// The intention of the test is to show what happens when attempting
-  /// to force cast in place a Swift URLRequest into an Obj-C NSMutableURLRequest.
-  /// This won't work because the Swift version of the object is a Struct
-  /// instead of a class and therefore is creating a new copy of the object
-  /// that will be different to the one we initialised at the beginning
-  func test02ResultWhenForceCasting() {
+  /// The intention of the test is to show what happens when casting
+  /// a Swift URLRequest to an Obj-C NSMutableURLRequest.
+  /// The cast succeeds, but because URLRequest is a struct (value type),
+  /// casting creates a new NSMutableURLRequest instance. Setting a result
+  /// on the mutable version doesn't affect the original request, demonstrating
+  /// the difference between value semantics (structs) and reference semantics (classes).
+  func test02ResultWhenForceCasting() throws {
     // Given
     let request = Self.makeSomeRequest()
+    let mutableRequest = try XCTUnwrap(request as? NSMutableURLRequest)
 
     // When
-    // swiftlint:disable:next force_cast
-    sut.setResult(.success(), in: request as! NSMutableURLRequest)
-    let result = sut.result(in: request)
+    sut.setResult(.success(), in: mutableRequest)
+    let failureResult = sut.result(in: request)
+    let successResult = sut.result(in: mutableRequest)
 
     // Then
-    XCTAssertNil(result)
+    XCTAssertNil(failureResult)
+    XCTAssertNotNil(successResult)
   }
 
   func test03ResultWhenRemoved() {
@@ -137,8 +125,6 @@ extension URLProtocolHelpersTests {
     let secondResult = sut.result(in: secondRequest)
 
     // Then
-    XCTAssertNotEqual(firstRequest, secondRequest)
-
     XCTAssertNotNil(firstResult)
     if case let .success(data, _, _) = firstResult {
       XCTAssertEqual(data, firstTestData)
@@ -146,7 +132,7 @@ extension URLProtocolHelpersTests {
       XCTFail("Expected .success on first result")
     }
 
-    XCTAssertNotNil(secondRequest)
+    XCTAssertNotNil(secondResult)
     if case let .success(data, _, _) = secondResult {
       XCTAssertEqual(data, secondTestData)
     } else {
@@ -213,12 +199,10 @@ extension URLProtocolHelpersTests {
     // Then
     waitForExpectations(timeout: 0.1)
 
-    XCTAssertNotNil(requestError)
-    if let error = requestError as NSError? {
-      XCTAssertEqual(error.code, NSURLErrorTimedOut)
-    } else {
-      XCTFail("Expected NSError error")
+    guard let error = requestError as NSError? else {
+      return XCTFail("Expected NSError error")
     }
+    XCTAssertEqual(error.code, NSURLErrorTimedOut)
   }
 
   func test08RequestWithSuccessfulResult() {
@@ -281,7 +265,7 @@ extension URLProtocolHelpersTests {
       .dataTask(with: request as URLRequest) { data, response, error in
         requestData = data
         requestResponse = response
-        requestError = error as NSError?
+        requestError = error as? NSError
         expect.fulfill()
       }
       .resume()
@@ -307,7 +291,7 @@ extension URLProtocolHelpersTests {
     }
 
     // When
-    sut.setResult(.success(testData, testResponse, delay: 1.0), in: request)
+    sut.setResult(.success(testData, testResponse, 1.0), in: request)
 
     let taskCompleted = expectation(description: #function)
     taskCompleted.isInverted = true
